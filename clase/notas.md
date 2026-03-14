@@ -28,36 +28,86 @@ Para la construcción del mapa de infraestructura se utilizó la herramienta dra
 
 Durante la sesión se logró desarrollar un mapa preliminar de la infraestructura lógica del sistema, identificando el flujo principal de solicitudes desde los clientes hacia el backend y la base de datos. Asimismo, se comenzaron a detectar posibles áreas críticas del sistema, como la dependencia de la base de datos central, la carga sobre el API Gateway y la necesidad de monitoreo para garantizar disponibilidad y rendimiento. Este avance permitió contar con una primera representación visual de la arquitectura sobre la cual se podrá continuar el análisis técnico en las siguientes etapas del taller.
 
+## 🧭 Lectura técnica del diagrama
+
+### 1) Flujo principal de extremo a extremo
+
+1. Usuario final interactúa desde plataforma web o app móvil.
+2. El tráfico entra por el **Load Balancer** para distribuir solicitudes.
+3. El **API Gateway** enruta y centraliza el acceso a los servicios.
+4. Los servicios de aplicación procesan la lógica de negocio:
+	- Rastreo de paquetes
+	- Motor de rutas
+	- Gestión de envíos
+	- Notificaciones
+5. Los servicios consultan/escriben sobre la **base de datos central**.
+6. Se apoyan servidores regionales (Bogotá, Medellín y Cali) para procesamiento zonal.
+7. El envío de notificaciones depende de un proveedor externo.
+8. El sistema de monitoreo recibe eventos para observabilidad y alertamiento.
+
+### 2) Decisiones de modelado y justificación
+
+- **Arquitectura por capas:** facilita lectura, diagnóstico y separación de responsabilidades.
+- **Servicios desacoplados por dominio funcional:** permite aislar cargas y analizar impacto por módulo.
+- **Servidores regionales:** representan distribución geográfica del procesamiento y cercanía operativa.
+- **Réplicas de lectura en datos:** muestran una estrategia inicial para aliviar consultas intensivas.
+- **Componentes externos explícitos (notificaciones/monitoreo):** visibilizan dependencias críticas fuera del núcleo.
+
 
 ## 🧩 Boceto inicial del modelo
 
 ![Borrador mapa](mapa-borrador.png)
 
-1. ¿Donde esta el cuello de botella?
+## 🔍 Diagnóstico técnico preliminar (caso de clase)
 
-La base de datos central porque todos los servicios dependen de ella.
+### 1) ¿Dónde está el principal cuello de botella?
 
-2. ¿Dónde hay riesgo de falla?
+El principal cuello de botella está en la **base de datos central**, debido a que concentra:
+
+- transacciones de múltiples servicios,
+- consultas de rastreo en tiempo real,
+- y sincronización de operaciones de envío/rutas.
+
+Aunque existen réplicas de lectura, la escritura continúa centralizada y puede degradar el rendimiento general bajo picos de demanda.
+
+### 2) ¿Dónde hay riesgo de falla (SPOF)?
 
 Puntos críticos:
 - API Gateway
 - Base de datos principal
 - Motor de rutas
 
-3. ¿Dónde puede haber latencia?
+Justificación breve:
 
-Tracking Service → Database ya que el rastreo es tiempo real.
+- **API Gateway:** si falla, se interrumpe el acceso a todos los servicios backend.
+- **Base de datos principal:** una indisponibilidad afecta rastreo, gestión de envíos y consistencia operativa.
+- **Motor de rutas:** impacta la asignación óptima y la eficiencia logística en toda la red.
 
-## 🔁 Tareas definidas para complementar el taller
+### 3) ¿Dónde puede presentarse latencia?
 
-Anote las responsabilidades acordadas entre los miembros del equipo para completar la entrega final:
+- **Rastreo de paquetes → Base de datos central:** por alta frecuencia de consultas en tiempo real.
+- **Servicios regionales → núcleo central:** por saltos de red interzona y congestión en horas pico.
+- **Notificaciones → proveedor externo:** por dependencia de SLA y tiempos de respuesta de terceros.
 
-| Tarea asignada | Responsable | Fecha estimada |
-|----------------|-------------|----------------|
-| Modelado final en draw.io | Jose Guzman | 10/08 |
-| Redacción del informe     | Bryam Diaz | 11/08 |
-| Investigación y referencias | Juan Abril | 12/08 |
+### 4) Impactos operativos observables
 
----
+- Aumento del tiempo de actualización del estado del paquete.
+- Respuestas lentas o intermitentes en app móvil y plataforma web.
+- Retraso en notificaciones al cliente final.
+- Menor capacidad de escalar horizontalmente si persiste alta dependencia del nodo de datos central.
+
+### 5) Oportunidades de mejora identificadas en clase
+
+- Fortalecer alta disponibilidad del API Gateway (redundancia activa-activa o activa-pasiva).
+- Evolucionar la estrategia de datos (particionamiento por zona o replicación multi-región).
+- Incorporar caché para consultas frecuentes de rastreo.
+- Implementar colas/eventos para desacoplar procesos no críticos en tiempo real.
+- Definir umbrales de alerta de latencia, errores y saturación por servicio.
+
+## ✅ Cierre de la sesión de clase
+
+En esta sesión se obtuvo un diagnóstico preliminar del caso RedExpress con base en el diagrama de infraestructura. El resultado permite justificar técnicamente los puntos críticos de rendimiento y disponibilidad, y deja una base sólida para la retroalimentación docente del taller en clase.
+
+
 
 _Este documento resume el trabajo colaborativo realizado durante la sesión del taller 4 en el curso AREM - Universidad de La Sabana._
